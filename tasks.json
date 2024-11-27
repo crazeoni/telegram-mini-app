@@ -1,0 +1,23 @@
+[
+    {
+        "id": 1,
+        "title": "Follow us on Twitter",
+        "reward": 500,
+        "completed": false,
+        "url": "https://twitter.com"
+    },
+    {
+        "id": 2,
+        "title": "Join our Telegram Channel",
+        "reward": 700,
+        "completed": false,
+        "url": "https://t.me/yourchannel"
+    },
+    {
+        "id": 3,
+        "title": "Claim your first NFT",
+        "reward": 1000,
+        "completed": false,
+        "url": "https://your-nft-site.com/claim"
+    }
+]

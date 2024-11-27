@@ -1,19 +1,21 @@
 from flask import Flask, request, jsonify
 import requests
 from flask_cors import CORS
+import json
+import os
 
 app = Flask(__name__)
 CORS(app)
+
+
+# Path to the tasks JSON file
+TASKS_FILE = "tasks.json"
 
 TELEGRAM_BOT_TOKEN = "7425794811:AAEmTeMbQa94UmWnTOyiNAn-rS7hdZO_1OA"
 #CHAT_ID = None  # Update dynamically based on incoming data if needed.
 
 # Placeholder data for tasks
-tasks = [
-    {"id": 1, "title": "Follow us on Twitter", "reward": 500, "completed": False},
-    {"id": 2, "title": "Join our Telegram Channel", "reward": 700, "completed": False},
-    {"id": 3, "title": "Claim your first NFT", "reward": 1000, "completed": False},
-]
+
 
 
 @app.route("/api/send-data", methods=["POST"])
@@ -40,39 +42,77 @@ def send_data():
     else:
         return jsonify({"error": "Invalid data"}), 400
 
+
+# Helper functions
+def load_tasks():
+    """Load tasks from the JSON file."""
+    if os.path.exists(TASKS_FILE):
+        with open(TASKS_FILE, "r") as file:
+            return json.load(file)
+    return []
+
+def save_tasks(tasks):
+    """Save tasks to the JSON file."""
+    with open(TASKS_FILE, "w") as file:
+        json.dump(tasks, file, indent=4)
+
+
 @app.route("/api/tasks", methods=["GET"])
 def get_tasks():
-    # Send the task list to the frontend
+    """Endpoint to fetch all tasks."""
+    tasks = load_tasks()
     return jsonify(tasks), 200
-
 
 @app.route("/api/tasks/complete", methods=["POST"])
 def complete_task():
+    """Endpoint to mark a task as completed."""
     data = request.json
-    task_id = data.get("task_id")  # Task ID from frontend
-    chat_id = data.get("chat_id")  # User's chat ID
+    task_id = data.get("task_id")
+    chat_id = data.get("chat_id")
 
-    # Find the task by ID
+    tasks = load_tasks()
     for task in tasks:
         if task["id"] == task_id and not task["completed"]:
-            task["completed"] = True  # Mark the task as completed
-            
-            # Simulate rewarding the user
-            reward_points = task["reward"]
+            task["completed"] = True
+            save_tasks(tasks)  # Save the updated tasks to the JSON file
 
-            # In a real system, update the user's reward in a database here
-            
-            return jsonify({"message": f"Task {task_id} completed!", "reward": reward_points}), 200
+            # Simulate rewarding the user
+            return jsonify({"message": f"Task {task_id} completed!", "reward": task["reward"]}), 200
 
     return jsonify({"error": "Task not found or already completed"}), 400
 
-
 @app.route("/api/get-balance", methods=["GET"])
 def get_balance():
-    # Sum rewards for completed tasks
+    """Endpoint to calculate total rewards."""
+    tasks = load_tasks()
     total_rewards = sum(task["reward"] for task in tasks if task["completed"])
     return jsonify({"total": total_rewards}), 200
 
-
 if __name__ == "__main__":
+    # Ensure the tasks.json file exists
+    if not os.path.exists(TASKS_FILE):
+	    with open(TASKS_FILE, "w") as file:
+	        json.dump([
+	            {
+	                "id": 1,
+	                "title": "Follow us on Twitter",
+	                "reward": 500,
+	                "completed": False,
+	                "url": "https://twitter.com"
+	            },
+	            {
+	                "id": 2,
+	                "title": "Join our Telegram Channel",
+	                "reward": 700,
+	                "completed": False,
+	                "url": "https://t.me/yourchannel"
+	            },
+	            {
+	                "id": 3,
+	                "title": "Claim your first NFT",
+	                "reward": 1000,
+	                "completed": False,
+	                "url": "https://your-nft-site.com/claim"
+	            }
+	            ], file, indent=4)
     app.run(host="0.0.0.0", port=5000)
