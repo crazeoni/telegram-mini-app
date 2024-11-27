@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 app = Flask(__name__)
 CORS(app)
 
-TELEGRAM_BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
+TELEGRAM_BOT_TOKEN = "7425794811:AAEmTeMbQa94UmWnTOyiNAn-rS7hdZO_1OA"
 
 # Data storage for user balances and mining sessions
 users = {}
