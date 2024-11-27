@@ -10,7 +10,6 @@ CHAT_ID = None  # Update dynamically based on incoming data if needed.
 def send_data():
     data = request.json  # Get data from Web App
     print(f"Received data: {data}")
-    CHAT_ID = data.get("chat_id", None)
 
     if "username" in data and "message" in data:
         # Construct message to send to Telegram bot
