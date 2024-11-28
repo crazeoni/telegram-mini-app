@@ -94,25 +94,25 @@ if __name__ == "__main__":
 	    with open(TASKS_FILE, "w") as file:
 	        json.dump([
 	            {
-	                "id": 1,
-	                "title": "Follow us on Twitter",
-	                "reward": 500,
-	                "completed": False,
-	                "url": "https://twitter.com"
-	            },
-	            {
-	                "id": 2,
-	                "title": "Join our Telegram Channel",
-	                "reward": 700,
-	                "completed": False,
-	                "url": "https://t.me/yourchannel"
-	            },
-	            {
-	                "id": 3,
-	                "title": "Claim your first NFT",
-	                "reward": 1000,
-	                "completed": False,
-	                "url": "https://your-nft-site.com/claim"
-	            }
+        "id": 1,
+        "title": "Follow us on Twitter",
+        "reward": 500,
+        "completed": false,
+        "url": "https://x.com/mid3e"
+    },
+    {
+        "id": 2,
+        "title": "Join our Telegram Channel",
+        "reward": 700,
+        "completed": false,
+        "url": "https://t.me/officialscream"
+    },
+    {
+        "id": 3,
+        "title": "Claim your first NFT",
+        "reward": 1000,
+        "completed": false,
+        "url": "https://your-nft-site.com/claim"
+    }
 	            ], file, indent=4)
     app.run(host="0.0.0.0", port=5000)
