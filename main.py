@@ -77,9 +77,14 @@ def complete_task():
             save_tasks(tasks)  # Save the updated tasks to the JSON file
 
             # Simulate rewarding the user
-            return jsonify({"message": f"Task {task_id} completed!", "reward": task["reward"]}), 200
+            return jsonify({
+                "message": f"Task {task_id} completed!",
+                "reward": task["reward"],
+                "task_id": task_id
+            }), 200
 
     return jsonify({"error": "Task not found or already completed"}), 400
+
 
 @app.route("/api/get-balance", methods=["GET"])
 def get_balance():
