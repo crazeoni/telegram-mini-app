@@ -9,7 +9,7 @@ CORS(app)
 
 
 # Path to the tasks JSON file
-TASKS_FILE = "tasks.json"
+TASKS_FILE = os.path.join(os.path.dirname(__file__), "tasks.json")
 
 TELEGRAM_BOT_TOKEN = "7425794811:AAEmTeMbQa94UmWnTOyiNAn-rS7hdZO_1OA"
 #CHAT_ID = None  # Update dynamically based on incoming data if needed.
