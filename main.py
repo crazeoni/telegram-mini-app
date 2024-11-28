@@ -7,12 +7,44 @@ import os
 app = Flask(__name__)
 CORS(app)
 
+
+# Path to the tasks JSON file
 TASKS_FILE = os.path.join(os.path.dirname(__file__), "tasks.json")
 USER_SCORES_FILE = os.path.join(os.path.dirname(__file__), "user_scores.json")
 
 TELEGRAM_BOT_TOKEN = "7425794811:AAEmTeMbQa94UmWnTOyiNAn-rS7hdZO_1OA"
-TELEGRAM_API_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/"
+#CHAT_ID = None  # Update dynamically based on incoming data if needed.
 
+# Placeholder data for tasks
+
+
+
+@app.route("/api/send-data", methods=["POST"])
+def send_data():
+    data = request.json  # Get data from Web App
+    print(f"Received data: {data}")
+    CHAT_ID = data.get("chat_id", None)
+
+    if "username" in data and "message" in data:
+        # Construct message to send to Telegram bot
+        bot_message = f"Received data from {data['username']}: {data['message']}"
+
+        # Send message to bot
+        if CHAT_ID:  # Ensure CHAT_ID is set
+            send_message_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+            payload = {"chat_id": CHAT_ID, "text": bot_message}
+            response = requests.post(send_message_url, json=payload)
+            if response.ok:
+                return jsonify({"message": "Data processed and sent to bot!"}), 200
+            else:
+                return jsonify({"error": "Failed to send message to bot!"}), 500
+        else:
+            return jsonify({"error": "Chat ID is not set!"}), 400
+    else:
+        return jsonify({"error": "Invalid data"}), 400
+
+
+# Helper functions
 def load_tasks():
     """Load tasks from the JSON file."""
     if os.path.exists(TASKS_FILE):
@@ -25,52 +57,46 @@ def save_tasks(tasks):
     with open(TASKS_FILE, "w") as file:
         json.dump(tasks, file, indent=4)
 
+
+@app.route("/api/tasks", methods=["GET"])
+def get_tasks():
+    """Endpoint to fetch all tasks."""
+    tasks = load_tasks()
+    return jsonify(tasks), 200
+
+
+# Helper function to load user scores
 def load_user_scores():
     """Load user scores from the JSON file."""
     if os.path.exists(USER_SCORES_FILE):
         with open(USER_SCORES_FILE, "r") as file:
             return json.load(file)
+    else:
+        print(f"{USER_SCORES_FILE} does not exist, returning empty dictionary.")  # Debugging
     return {}
 
+
+# Helper function to save user scores
 def save_user_scores(user_scores):
     """Save user scores to the JSON file."""
+    print("Saving user scores:", user_scores)  # Debugging
     with open(USER_SCORES_FILE, "w") as file:
         json.dump(user_scores, file, indent=4)
 
-@app.route("/api/start", methods=["POST"])
-def start_bot():
-    """Handle when a new user interacts with the bot for the first time."""
-    data = request.json
-    chat_id = data["message"]["chat"]["id"]
-    username = data["message"]["from"].get("username", "unknown")
-    
-    user_scores = load_user_scores()
 
-    if str(chat_id) not in user_scores:
-        user_scores[str(chat_id)] = {"username": username, "score": 0}
-        save_user_scores(user_scores)
-        send_message(chat_id, "Welcome! Your profile has been created. Start completing tasks to earn points!")
-    else:
-        send_message(chat_id, "Welcome back! Ready to complete tasks and earn rewards!")
-
-    return jsonify({"message": "User initialized or found"}), 200
-
-def send_message(chat_id, text):
-    """Send a message to the Telegram user."""
-    payload = {
-        "chat_id": chat_id,
-        "text": text
-    }
-    response = requests.post(f"{TELEGRAM_API_URL}sendMessage", json=payload)
-    return response
-
+# Endpoint to fetch the leaderboard (top 100 users based on points)
 @app.route("/api/leaderboard", methods=["GET"])
 def leaderboard():
     """Endpoint to fetch the leaderboard, sorted by user points."""
     user_scores = load_user_scores()
-    sorted_scores = sorted(user_scores.items(), key=lambda x: x[1]['score'], reverse=True)[:100]
-    leaderboard = [{"username": user, "points": points['score']} for user, points in sorted_scores]
+
+    # Sort users by points in descending order and take the top 100
+    sorted_scores = sorted(user_scores.items(), key=lambda x: x[1], reverse=True)[:100]
+
+    # Format the leaderboard as a list of dictionaries
+    leaderboard = [{"username": user, "points": points} for user, points in sorted_scores]
     return jsonify(leaderboard), 200
+
 
 @app.route("/api/tasks/complete", methods=["POST"])
 def complete_task():
@@ -78,17 +104,26 @@ def complete_task():
     data = request.json
     task_id = data.get("task_id")
     chat_id = data.get("chat_id")
-    reward = data.get("reward")  
+    username = data.get("username")  # Extract username
 
-    user_scores = load_user_scores()
+    tasks = load_tasks()
+    for task in tasks:
+        if task["id"] == task_id and not task["completed"]:
+            task["completed"] = True
+            save_tasks(tasks)  # Save the updated tasks to the JSON file
 
-    if str(chat_id) not in user_scores:
-        user_scores[str(chat_id)] = {"username": "unknown", "score": 0}
+            # Update user score
+            user_scores = load_user_scores()
+            if username in user_scores:
+                user_scores[username] += task["reward"]
+            else:
+                user_scores[username] = task["reward"]
+            save_user_scores(user_scores)  # Save updated user scores
 
-    user_scores[str(chat_id)]["score"] += reward
-    save_user_scores(user_scores)
+            return jsonify({"message": f"Task {task_id} completed!", "reward": task["reward"]}), 200
 
-    return jsonify({"message": f"Task completed! Your new score is {user_scores[str(chat_id)]['score']}"}), 200
+    return jsonify({"error": "Task not found or already completed"}), 400
+
 
 @app.route("/api/get-balance", methods=["GET"])
 def get_balance():
