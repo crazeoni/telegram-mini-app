@@ -10,6 +10,7 @@ CORS(app)
 
 # Path to the tasks JSON file
 TASKS_FILE = os.path.join(os.path.dirname(__file__), "tasks.json")
+USER_SCORES_FILE = os.path.join(os.path.dirname(__file__), "user_scores.json")
 
 TELEGRAM_BOT_TOKEN = "7425794811:AAEmTeMbQa94UmWnTOyiNAn-rS7hdZO_1OA"
 #CHAT_ID = None  # Update dynamically based on incoming data if needed.
@@ -63,12 +64,42 @@ def get_tasks():
     tasks = load_tasks()
     return jsonify(tasks), 200
 
+
+# Helper function to load user scores
+def load_user_scores():
+    """Load user scores from the JSON file."""
+    if os.path.exists(USER_SCORES_FILE):
+        with open(USER_SCORES_FILE, "r") as file:
+            return json.load(file)
+    return {}
+
+# Helper function to save user scores
+def save_user_scores(user_scores):
+    """Save user scores to the JSON file."""
+    with open(USER_SCORES_FILE, "w") as file:
+        json.dump(user_scores, file, indent=4)
+
+# Endpoint to fetch the leaderboard (top 100 users based on points)
+@app.route("/api/leaderboard", methods=["GET"])
+def leaderboard():
+    """Endpoint to fetch the leaderboard, sorted by user points."""
+    user_scores = load_user_scores()
+
+    # Sort users by points in descending order and take the top 100
+    sorted_scores = sorted(user_scores.items(), key=lambda x: x[1], reverse=True)[:100]
+
+    # Format the leaderboard as a list of dictionaries
+    leaderboard = [{"username": user, "points": points} for user, points in sorted_scores]
+    return jsonify(leaderboard), 200
+
+
 @app.route("/api/tasks/complete", methods=["POST"])
 def complete_task():
-    """Endpoint to mark a task as completed."""
+    """Endpoint to mark a task as completed and update user score."""
     data = request.json
     task_id = data.get("task_id")
     chat_id = data.get("chat_id")
+    username = data.get("username")  # Extract username
 
     tasks = load_tasks()
     for task in tasks:
@@ -76,12 +107,15 @@ def complete_task():
             task["completed"] = True
             save_tasks(tasks)  # Save the updated tasks to the JSON file
 
-            # Simulate rewarding the user
-            return jsonify({
-                "message": f"Task {task_id} completed!",
-                "reward": task["reward"],
-                "task_id": task_id
-            }), 200
+            # Update user score
+            user_scores = load_user_scores()
+            if username in user_scores:
+                user_scores[username] += task["reward"]
+            else:
+                user_scores[username] = task["reward"]
+            save_user_scores(user_scores)  # Save updated user scores
+
+            return jsonify({"message": f"Task {task_id} completed!", "reward": task["reward"]}), 200
 
     return jsonify({"error": "Task not found or already completed"}), 400
 
