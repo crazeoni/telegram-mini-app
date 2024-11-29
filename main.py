@@ -105,6 +105,47 @@ def complete_task():
 
 
 
+# Endpoint to handle referrals
+@app.route("/api/refer", methods=["POST"])
+def refer():
+    """Endpoint to handle referrals."""
+    data = request.json
+    referrer_username = data.get("referrer_username")
+    new_user_username = data.get("new_user_username")
+
+    # Load user scores
+    user_scores = load_user_scores()
+
+    # Check if referrer exists
+    if referrer_username not in user_scores:
+        return jsonify({"error": "Referrer does not exist."}), 400
+
+    # Add the new user to the scores (initially with 0 points)
+    if new_user_username not in user_scores:
+        user_scores[new_user_username] = {
+            "points": 0,
+            "referred_by": referrer_username,
+            "referred_users": []
+        }
+        save_user_scores(user_scores)
+
+        # Add the new user to the referrer's list
+        user_scores[referrer_username]["referred_users"].append(new_user_username)
+        save_user_scores(user_scores)
+
+        # Optionally, give points to both referrer and new user for the referral
+        user_scores[referrer_username]["points"] += 10  # Referral bonus for referrer
+        user_scores[new_user_username]["points"] += 5    # Welcome bonus for the new user
+        save_user_scores(user_scores)
+
+        return jsonify({"message": "Referral successful!"}), 200
+    else:
+        return jsonify({"error": "User already exists."}), 400
+
+
+
+
+
 # Endpoint to calculate total rewards
 @app.route("/api/get-balance", methods=["GET"])
 def get_balance():
