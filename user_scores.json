@@ -1,5 +1,22 @@
 {
-    "user1": 120,
-    "user2": 150,
-    "user3": 100
+    "user1": {
+        "points": 120,
+        "referrals": ["user4"]
+    },
+    "user2": {
+        "points": 150,
+        "referrals": ["user5"]
+    },
+    "user3": {
+        "points": 100,
+        "referrals": []
+    },
+    "user4": {
+        "points": 0,
+        "referrals": []
+    },
+    "user5": {
+        "points": 0,
+        "referrals": []
+    }
 }

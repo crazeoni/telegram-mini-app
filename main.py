@@ -33,18 +33,30 @@ def save_tasks(tasks):
     with open(TASKS_FILE, "w") as file:
         json.dump(tasks, file, indent=4)
 
-# Helper function to load user scores
 def load_user_scores():
-    """Load user scores from the JSON file."""
-    user_scores_file_path = Path(USER_SCORES_FILE)
+    """Load user scores from a JSON file."""
+    try:
+        with open("user_scores.json", "r") as file:
+            user_scores = json.load(file)
+        return user_scores
+    except FileNotFoundError:
+        return {}  # Return an empty dictionary if the file doesn't exist
+    except json.JSONDecodeError:
+        return {}  # Return an empty dictionary if the JSON is malformed
 
-    # If the user scores file doesn't exist, return an empty dictionary
-    if not user_scores_file_path.exists():
-        print(f"{USER_SCORES_FILE} does not exist, returning empty dictionary.")  # Debugging
-        return {}
-    
-    with open(USER_SCORES_FILE, "r") as file:
-        return json.load(file)
+# Endpoint to fetch referrals for a user
+@app.route("/api/referrals/<username>", methods=["GET"])
+def get_referrals(username):
+    """Fetch referrals for a given user."""
+    user_scores = load_user_scores()  # Load user data
+
+    # Find the user's referrals
+    if username in user_scores:
+        referrals = user_scores[username].get("referrals", [])
+        return jsonify({"referrals": referrals}), 200
+    return jsonify({"error": "User not found"}), 404
+
+
 
 # Helper function to save user scores
 def save_user_scores(user_scores):
@@ -62,21 +74,27 @@ def get_tasks():
     return jsonify(tasks), 200
 
 
-# Endpoint to fetch the leaderboard (top 100 users based on points)
 @app.route("/api/leaderboard", methods=["GET"])
 def leaderboard():
     """Endpoint to fetch the leaderboard, sorted by user points."""
     user_scores = load_user_scores()
 
-    # Sort users by points in descending order and take the top 100
-    sorted_scores = sorted(user_scores.items(), key=lambda x: x[1], reverse=True)[:100]
+    # Extract and sort users by points in descending order, taking the top 100
+    sorted_scores = sorted(
+        user_scores.items(),
+        key=lambda x: x[1]["points"],  # Access the "points" key in the user data
+        reverse=True
+    )[:100]
 
     # Format the leaderboard as a list of dictionaries
-    leaderboard = [{"username": user, "points": points} for user, points in sorted_scores]
+    leaderboard = [
+        {"username": user, "points": data["points"], "referrals": data["referrals"]}
+        for user, data in sorted_scores
+    ]
+
     return jsonify(leaderboard), 200
 
 
-# Endpoint to mark a task as completed and update the user score
 @app.route("/api/tasks/complete", methods=["POST"])
 def complete_task():
     """Endpoint to mark a task as completed and update user score."""
@@ -84,6 +102,7 @@ def complete_task():
     task_id = data.get("task_id")
     chat_id = data.get("chat_id")
     username = data.get("username")  # Extract username
+    referrer_username = data.get("referrer_username")  # Extract referrer username if provided
 
     tasks = load_tasks()
     for task in tasks:
@@ -94,14 +113,23 @@ def complete_task():
             # Update user score
             user_scores = load_user_scores()
             if username in user_scores:
-                user_scores[username] += task["reward"]
+                user_scores[username]["points"] += task["reward"]
             else:
-                user_scores[username] = task["reward"]
+                user_scores[username] = {"points": task["reward"], "referrals": []}
+
+            # Handle referral points
+            if referrer_username and referrer_username != username and referrer_username in user_scores:
+                referral_bonus = 50  # Points for the referrer (can adjust)
+                user_scores[referrer_username]["points"] += referral_bonus
+                if username not in user_scores[referrer_username]["referrals"]:
+                    user_scores[referrer_username]["referrals"].append(username)
+
             save_user_scores(user_scores)  # Save updated user scores
 
             return jsonify({"message": f"Task {task_id} completed!", "reward": task["reward"]}), 200
 
     return jsonify({"error": "Task not found or already completed"}), 400
+
 
 
 
