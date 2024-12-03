@@ -15,9 +15,23 @@
     },
     {
         "id": 3,
-        "title": "Claim your first NFT",
+        "title": "Follow Us on TikTok",
         "reward": 1000,
         "completed": false,
         "url": "https://www.tiktok.com/@crazeonie"
+    },
+    {
+        "id": 4,
+        "title": "Follow Us on Instagram",
+        "reward": 1000,
+        "completed": false,
+        "url": "https://www.tiktok.com/@crazeonie"
+    },
+    {
+        "id": 5,
+        "title": "Follow Us on Instagram",
+        "reward": 1000,
+        "completed": false,
+        "url": "https://www.instagram.com/oziisaiah01"
     }
 ]
