@@ -2,9 +2,19 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import json
 from pathlib import Path
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from config import SQLALCHEMY_DATABASE_URI, SQLALCHEMY_TRACK_MODIFICATIONS
+from models import db
 
 app = Flask(__name__)
 CORS(app)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = SQLALCHEMY_TRACK_MODIFICATIONS
+
+db.init_app(app)
+migrate = Migrate(app, db)
 
 # Path to the tasks JSON file
 TASKS_FILE = "tasks.json"
@@ -67,68 +77,57 @@ def save_user_scores(user_scores):
 
 
 # Endpoint to fetch all tasks
+# Routes
 @app.route("/api/tasks", methods=["GET"])
 def get_tasks():
-    """Endpoint to fetch all tasks."""
-    tasks = load_tasks()
-    return jsonify(tasks), 200
+    """Fetch all tasks."""
+    tasks = Task.query.all()
+    tasks_data = [{"id": task.id, "description": task.description, "reward": task.reward, "completed": task.completed} for task in tasks]
+    return jsonify(tasks_data), 200
 
 
 @app.route("/api/leaderboard", methods=["GET"])
 def leaderboard():
-    """Endpoint to fetch the leaderboard, sorted by user points."""
-    user_scores = load_user_scores()
-
-    # Extract and sort users by points in descending order, taking the top 100
-    sorted_scores = sorted(
-        user_scores.items(),
-        key=lambda x: x[1]["points"],  # Access the "points" key in the user data
-        reverse=True
-    )[:100]
-
-    # Format the leaderboard as a list of dictionaries
-    leaderboard = [
-        {"username": user, "points": data["points"], "referrals": data["referrals"]}
-        for user, data in sorted_scores
-    ]
-
+    """Fetch leaderboard sorted by points."""
+    users = User.query.order_by(User.points.desc()).limit(100).all()
+    leaderboard = [{"username": user.username, "points": user.points, "referrals": user.referrals} for user in users]
     return jsonify(leaderboard), 200
 
 
 @app.route("/api/tasks/complete", methods=["POST"])
 def complete_task():
-    """Endpoint to mark a task as completed and update user score."""
+    """Mark a task as completed and update the user's score."""
     data = request.json
     task_id = data.get("task_id")
-    chat_id = data.get("chat_id")
-    username = data.get("username")  # Extract username
-    referrer_username = data.get("referrer_username")  # Extract referrer username if provided
+    username = data.get("username")
+    referrer_username = data.get("referrer_username")
 
-    tasks = load_tasks()
-    for task in tasks:
-        if task["id"] == task_id and not task["completed"]:
-            task["completed"] = True
-            save_tasks(tasks)  # Save the updated tasks to the JSON file
+    # Find and update task
+    task = Task.query.get(task_id)
+    if not task or task.completed:
+        return jsonify({"error": "Task not found or already completed"}), 400
 
-            # Update user score
-            user_scores = load_user_scores()
-            if username in user_scores:
-                user_scores[username]["points"] += task["reward"]
-            else:
-                user_scores[username] = {"points": task["reward"], "referrals": []}
+    task.completed = True
+    db.session.commit()
 
-            # Handle referral points
-            if referrer_username and referrer_username != username and referrer_username in user_scores:
-                referral_bonus = 50  # Points for the referrer (can adjust)
-                user_scores[referrer_username]["points"] += referral_bonus
-                if username not in user_scores[referrer_username]["referrals"]:
-                    user_scores[referrer_username]["referrals"].append(username)
+    # Update user score
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        user = User(username=username, points=task.reward, referrals=[])
+        db.session.add(user)
+    else:
+        user.points += task.reward
 
-            save_user_scores(user_scores)  # Save updated user scores
+    # Update referral points
+    if referrer_username and referrer_username != username:
+        referrer = User.query.filter_by(username=referrer_username).first()
+        if referrer:
+            referrer.points += 50  # Referral bonus
+            if username not in referrer.referrals:
+                referrer.referrals.append(username)
 
-            return jsonify({"message": f"Task {task_id} completed!", "reward": task["reward"]}), 200
-
-    return jsonify({"error": "Task not found or already completed"}), 400
+    db.session.commit()
+    return jsonify({"message": f"Task {task_id} completed!", "reward": task.reward}), 200
 
 
 
@@ -136,9 +135,8 @@ def complete_task():
 # Endpoint to calculate total rewards
 @app.route("/api/get-balance", methods=["GET"])
 def get_balance():
-    """Endpoint to calculate total rewards."""
-    tasks = load_tasks()
-    total_rewards = sum(task["reward"] for task in tasks if task["completed"])
+    """Calculate total rewards for completed tasks."""
+    total_rewards = db.session.query(db.func.sum(Task.reward)).filter(Task.completed == True).scalar() or 0
     return jsonify({"total": total_rewards}), 200
 
 
