@@ -10,6 +10,7 @@ class User(db.Model):
 
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    description = db.Column(db.String(255), nullable=False)
+    title = db.Column(db.String(80), nullable=False)
     reward = db.Column(db.Integer, nullable=False)
     completed = db.Column(db.Boolean, default=False)
+    url = db.Column(db.String(200), nullable=False)  # Add this line for the URL field
