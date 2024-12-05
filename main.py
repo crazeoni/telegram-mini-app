@@ -80,10 +80,21 @@ def save_user_scores(user_scores):
 # Routes
 @app.route("/api/tasks", methods=["GET"])
 def get_tasks():
-    """Fetch all tasks."""
+    """Fetch all tasks with title, URL, and username."""
     tasks = Task.query.all()
-    tasks_data = [{"id": task.id, "description": task.description, "reward": task.reward, "completed": task.completed} for task in tasks]
+    tasks_data = [
+        {
+            "id": task.id,
+            "title": task.title,
+            "url": task.url,
+            "reward": task.reward,
+            "completed": task.completed,
+            "username": task.user.username  # Assuming a relationship between Task and User
+        }
+        for task in tasks
+    ]
     return jsonify(tasks_data), 200
+
 
 
 @app.route("/api/leaderboard", methods=["GET"])
