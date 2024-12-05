@@ -131,6 +131,40 @@ def complete_task():
 
 
 
+@app.route("/api/register", methods=["POST"])
+def register_user():
+    """Register a new user."""
+    data = request.json
+    username = data.get("username")
+    chat_id = data.get("chat_id")
+    referral_data = data.get("referral_data")
+
+    if not username or not chat_id:
+        return jsonify({"error": "Username and chat_id are required"}), 400
+
+    # Check if the user already exists
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        # Register the new user
+        user = User(username=username, chat_id=chat_id, points=0, referrals=[])
+        db.session.add(user)
+        db.session.commit()
+
+        # Process referral data
+        if referral_data:
+            referrer = User.query.filter_by(username=referral_data).first()
+            if referrer and referrer.username != username:
+                referrer.referrals.append(username)
+                referrer.points += 50  # Optional referral bonus
+                db.session.commit()
+
+        return jsonify({"message": "User registered successfully"}), 201
+
+    return jsonify({"message": "User already exists"}), 200
+
+
+
+
 
 # Endpoint to calculate total rewards
 @app.route("/api/get-balance", methods=["GET"])
