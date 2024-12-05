@@ -18,5 +18,4 @@ class Task(db.Model):
     completed = db.Column(db.Boolean, default=False)
     url = db.Column(db.String(200), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    user = db.relationship('User', backref=db.backref('tasks', lazy=True))
 
