@@ -5,7 +5,8 @@ from pathlib import Path
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from config import SQLALCHEMY_DATABASE_URI, SQLALCHEMY_TRACK_MODIFICATIONS
-from models import db
+from models import db, User, Task
+
 
 app = Flask(__name__)
 CORS(app)
