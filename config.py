@@ -1,2 +1,2 @@
-SQLALCHEMY_DATABASE_URI = 'postgresql://scream_tg_user:N0R00VqPu6eOW907DMqJqtqzfP4uxhiR@dpg-ct99c056l47c73aovre0-a/scream_database'
+SQLALCHEMY_DATABASE_URI = 'postgresql://mide:zXG47ShjSMytebiUBMD1igRHmXcSCiKz@dpg-ct99mtt6l47c73ap5hd0-a/mide_db_qact'
 SQLALCHEMY_TRACK_MODIFICATIONS = False
