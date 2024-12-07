@@ -119,18 +119,20 @@ def complete_task():
     if not task or task.completed:
         return jsonify({"error": "Task not found or already completed"}), 400
 
+    # Find the user who completed the task
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    # Mark the task as completed and associate it with the user
     task.completed = True
+    task.user_id = user.id  # Assign task to the user who completed it
     db.session.commit()
 
     # Update user score
-    user = User.query.filter_by(username=username).first()
-    if not user:
-        user = User(username=username, points=task.reward, referrals=[])
-        db.session.add(user)
-    else:
-        user.points += task.reward
+    user.points += task.reward
 
-    # Update referral points
+    # Handle referral points
     if referrer_username and referrer_username != username:
         referrer = User.query.filter_by(username=referrer_username).first()
         if referrer:
