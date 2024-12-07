@@ -127,9 +127,9 @@ def complete_task():
     if not user or not task:
         return jsonify({"error": "User or task not found"}), 404
 	
-	if user.completed_task_ids is None:
-		user.completed_task_ids = []
-	
+    
+    if user.completed_task_ids is None: user.completed_task_ids = []
+    
     # Ensure user-specific task completion
     if task.id in user.completed_task_ids:
         return jsonify({"message": "Task already completed by this user"}), 200
