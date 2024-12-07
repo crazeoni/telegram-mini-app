@@ -117,8 +117,8 @@ def complete_task():
     # Debugging logs
     print(f"Payload data: {data}")
 
-    # Find the task
-    task = Task.query.get(task_id)
+    # Find the task using the updated method
+    task = db.session.get(Task, task_id)
     if not task or task.completed:
         return jsonify({"error": "Task not found or already completed"}), 400
 
@@ -194,4 +194,4 @@ def get_balance():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5000, debug=True)
