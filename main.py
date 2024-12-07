@@ -123,7 +123,7 @@ def complete_task():
         return jsonify({"error": "Task not found or already completed"}), 400
 
     # Find the user who completed the task
-    user = User.query.filter_by(username=username).first()
+    user = User.query.filter(db.func.lower(User.username) == db.func.lower(username)).first()
     if not user:
         print(f"User not found for username: {username}")
         return jsonify({"error": "User not found"}), 404
