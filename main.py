@@ -126,7 +126,10 @@ def complete_task():
 
     if not user or not task:
         return jsonify({"error": "User or task not found"}), 404
-
+	
+	if user.completed_task_ids is None:
+		user.completed_task_ids = []
+	
     # Ensure user-specific task completion
     if task.id in user.completed_task_ids:
         return jsonify({"message": "Task already completed by this user"}), 200
@@ -160,6 +163,7 @@ def register_user():
     username = data.get("username")
     chat_id = data.get("chat_id")
     referral_data = data.get("referral_data")
+    is_restart = data.get("is_restart", False)  # New flag to indicate bot restart
 
     if not username or not chat_id:
         return jsonify({"error": "Username and chat_id are required"}), 400
@@ -168,7 +172,12 @@ def register_user():
     user = User.query.filter_by(chat_id=chat_id).first()
 
     if user:
-        # If the user already exists, update their username if necessary
+        # Only reset completed tasks if it's a bot restart
+        if is_restart:
+            user.completed_task_ids = []  # Reset the completed tasks
+            db.session.commit()
+
+        # If the username is different, update it
         if user.username != username:
             user.username = username
             db.session.commit()
@@ -203,6 +212,7 @@ def register_user():
         "points": new_user.points,
         "completed_tasks": [],
     }), 201
+
 
 
 
