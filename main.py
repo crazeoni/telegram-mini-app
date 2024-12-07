@@ -81,17 +81,15 @@ def save_user_scores(user_scores):
 # Routes
 @app.route("/api/tasks", methods=["GET"])
 def get_tasks():
-    """Fetch all tasks with title, URL, and username."""
-    tasks = Task.query.all()
+    """Fetch all tasks assigned to a specific user."""
+    chat_id = request.args.get("chat_id")
+    user = User.query.filter_by(chat_id=chat_id).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    tasks = Task.query.filter_by(user_id=user.id).all()
     tasks_data = [
-        {
-            "id": task.id,
-            "title": task.title,
-            "url": task.url,
-            "reward": task.reward,
-            "completed": task.completed,
-            "username": task.user.username  # Assuming a relationship between Task and User
-        }
+        {"id": task.id, "title": task.title, "url": task.url, "reward": task.reward, "completed": task.completed}
         for task in tasks
     ]
     return jsonify(tasks_data), 200
@@ -154,8 +152,7 @@ def register_user():
     if not username or not chat_id:
         return jsonify({"error": "Username and chat_id are required"}), 400
 
-    # Check if the user already exists
-    user = User.query.filter_by(username=username).first()
+    user = User.query.filter_by(chat_id=chat_id).first()
     if not user:
         # Register the new user
         user = User(username=username, chat_id=chat_id, points=0, referrals=[])
@@ -167,11 +164,10 @@ def register_user():
             referrer = User.query.filter_by(username=referral_data).first()
             if referrer and referrer.username != username:
                 referrer.referrals.append(username)
-                referrer.points += 50  # Optional referral bonus
+                referrer.points += 50  # Referral bonus
                 db.session.commit()
 
         return jsonify({"message": "User registered successfully"}), 201
-
     return jsonify({"message": "User already exists"}), 200
 
 
@@ -181,9 +177,23 @@ def register_user():
 # Endpoint to calculate total rewards
 @app.route("/api/get-balance", methods=["GET"])
 def get_balance():
-    """Calculate total rewards for completed tasks."""
-    total_rewards = db.session.query(db.func.sum(Task.reward)).filter(Task.completed == True).scalar() or 0
+    """Calculate total rewards for completed tasks for a specific user."""
+    chat_id = request.args.get("chat_id")
+    if not chat_id:
+        return jsonify({"error": "chat_id is required"}), 400
+
+    # Fetch user by chat_id
+    user = User.query.filter_by(chat_id=chat_id).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    # Calculate total rewards for completed tasks for the user
+    total_rewards = db.session.query(db.func.sum(Task.reward)).filter(
+        Task.completed == True, Task.user_id == user.id
+    ).scalar() or 0
+
     return jsonify({"total": total_rewards}), 200
+
 
 
 if __name__ == "__main__":
