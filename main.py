@@ -90,7 +90,7 @@ def get_tasks():
             "url": task.url,
             "reward": task.reward,
             "completed": task.completed,
-            "username": task.user.username  # Assuming a relationship between Task and User
+            "username": task.user.username if task.user else None  # Safely handle None
         }
         for task in tasks
     ]
