@@ -8,6 +8,7 @@ class User(db.Model):
     chat_id = db.Column(db.String(120), unique=True, nullable=False)
     points = db.Column(db.Integer, default=0)
     referrals = db.Column(db.JSON, default=[])
+    completed_task_ids = db.Column(db.JSON, default=[])  # Track tasks completed by the user
     tasks = db.relationship("Task", backref="user", lazy=True)  # Relationship to Task
 
 

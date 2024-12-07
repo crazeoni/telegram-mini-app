@@ -81,18 +81,23 @@ def save_user_scores(user_scores):
 # Routes
 @app.route("/api/tasks", methods=["GET"])
 def get_tasks():
-    """Fetch all tasks assigned to a specific user."""
-    chat_id = request.args.get("chat_id")
-    user = User.query.filter_by(chat_id=chat_id).first()
-    if not user:
-        return jsonify({"error": "User not found"}), 404
-
-    tasks = Task.query.filter_by(user_id=user.id).all()
-    tasks_data = [
-        {"id": task.id, "title": task.title, "url": task.url, "reward": task.reward, "completed": task.completed}
-        for task in tasks
-    ]
-    return jsonify(tasks_data), 200
+    """Fetch all tasks with details."""
+    try:
+        tasks = Task.query.all()
+        tasks_data = [
+            {
+                "id": task.id,
+                "title": task.title,
+                "url": task.url,
+                "reward": task.reward,
+                "completed": task.completed,
+                "username": task.user.username if task.user else None
+            }
+            for task in tasks
+        ]
+        return jsonify(tasks_data), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 
@@ -106,44 +111,51 @@ def leaderboard():
 
 @app.route("/api/tasks/complete", methods=["POST"])
 def complete_task():
-    """Mark a task as completed and update the user's score."""
+    """Mark a task as completed for a specific user and update points."""
     data = request.json
     task_id = data.get("task_id")
     username = data.get("username")
     referrer_username = data.get("referrer_username")
 
-    # Find and update task
-    task = Task.query.get(task_id)
-    if not task or task.completed:
-        return jsonify({"error": "Task not found or already completed"}), 400
+    if not task_id or not username:
+        return jsonify({"error": "Task ID and username are required"}), 400
 
-    task.completed = True
+    # Retrieve user and task
+    user = User.query.filter_by(username=username).first()
+    task = Task.query.get(task_id)
+
+    if not user or not task:
+        return jsonify({"error": "User or task not found"}), 404
+
+    # Ensure user-specific task completion
+    if task.id in user.completed_task_ids:
+        return jsonify({"message": "Task already completed by this user"}), 200
+
+    # Record task completion
+    user.completed_task_ids.append(task.id)
+    user.points += task.reward  # Update user points
     db.session.commit()
 
-    # Update user score
-    user = User.query.filter_by(username=username).first()
-    if not user:
-        user = User(username=username, points=task.reward, referrals=[])
-        db.session.add(user)
-    else:
-        user.points += task.reward
-
-    # Update referral points
+    # Handle referral logic if applicable
     if referrer_username and referrer_username != username:
         referrer = User.query.filter_by(username=referrer_username).first()
         if referrer:
-            referrer.points += 50  # Referral bonus
             if username not in referrer.referrals:
-                referrer.referrals.append(username)
+                referrer.referrals.append(username)  # Track referral
+                referrer.points += 50  # Referral bonus
+                db.session.commit()
 
-    db.session.commit()
-    return jsonify({"message": f"Task {task_id} completed!", "reward": task.reward}), 200
+    return jsonify({
+        "message": f"Task {task_id} marked as completed for {username}!",
+        "reward": task.reward
+    }), 200
+
 
 
 
 @app.route("/api/register", methods=["POST"])
 def register_user():
-    """Register a new user."""
+    """Handle user registration or re-registration on bot restart."""
     data = request.json
     username = data.get("username")
     chat_id = data.get("chat_id")
@@ -152,23 +164,46 @@ def register_user():
     if not username or not chat_id:
         return jsonify({"error": "Username and chat_id are required"}), 400
 
+    chat_id = str(chat_id)  # Ensure chat_id is a string for consistency
     user = User.query.filter_by(chat_id=chat_id).first()
-    if not user:
-        # Register the new user
-        user = User(username=username, chat_id=chat_id, points=0, referrals=[])
-        db.session.add(user)
-        db.session.commit()
 
-        # Process referral data
-        if referral_data:
-            referrer = User.query.filter_by(username=referral_data).first()
-            if referrer and referrer.username != username:
-                referrer.referrals.append(username)
-                referrer.points += 50  # Referral bonus
-                db.session.commit()
+    if user:
+        # If the user already exists, update their username if necessary
+        if user.username != username:
+            user.username = username
+            db.session.commit()
 
-        return jsonify({"message": "User registered successfully"}), 201
-    return jsonify({"message": "User already exists"}), 200
+        return jsonify({
+            "message": f"Welcome back, {username}!",
+            "points": user.points,
+            "completed_tasks": user.completed_task_ids,
+        }), 200
+
+    # If user doesn't exist, create a new user
+    new_user = User(
+        chat_id=chat_id,
+        username=username,
+        points=0,
+        referrals=[],
+        completed_task_ids=[]
+    )
+    db.session.add(new_user)
+    db.session.commit()
+
+    # Process referral data if provided
+    if referral_data:
+        referrer = User.query.filter_by(username=referral_data).first()
+        if referrer and referrer.username != username:
+            referrer.referrals.append(username)
+            referrer.points += 50  # Referral bonus
+            db.session.commit()
+
+    return jsonify({
+        "message": f"Welcome, {username}! Your account has been created.",
+        "points": new_user.points,
+        "completed_tasks": [],
+    }), 201
+
 
 
 
