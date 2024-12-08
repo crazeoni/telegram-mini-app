@@ -126,7 +126,7 @@ def complete_task():
     user = User.query.filter_by(username=username).first()
     if not user:
         print(f"User not found for username: {username}")
-			return jsonify({"error": "User not found"}), 404
+		return jsonify({"error": "User not found"}), 404
     else:
         user.points += task.reward
 
