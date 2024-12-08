@@ -124,13 +124,12 @@ def complete_task():
         return jsonify({"error": "Task not found or already completed"}), 400
 
     task.completed = True
-    task.user_id = user.id
     db.session.commit()
 
     # Update user score
     user = User.query.filter_by(username=username).first()
     if not user:
-        user = User(username=username, points=task.reward, referrals=[])
+        user = User(username=username, chat_id=chat_id, points=500, referrals=[])
         db.session.add(user)
     else:
         user.points += task.reward
