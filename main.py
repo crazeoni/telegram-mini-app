@@ -118,33 +118,27 @@ def complete_task():
     username = data.get("username")
     referrer_username = data.get("referrer_username")
 
-    # Debugging logs
-    print(f"Payload data: {data}")
-
-    # Find the task using the updated method
-    task = db.session.get(Task, task_id)
+    # Find and update task
+    task = Task.query.get(task_id)
     if not task or task.completed:
         return jsonify({"error": "Task not found or already completed"}), 400
 
-    # Find the user who completed the task
-    user = User.query.filter(db.func.lower(User.username) == db.func.lower(username)).first()
-    if not user:
-        print(f"User not found for username: {username}")
-        return jsonify({"error": "User not found"}), 404
-
-    # Mark the task as completed
     task.completed = True
-    task.user_id = user.id  # Associate task with user
     db.session.commit()
 
     # Update user score
-    user.points += task.reward
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        user = User(username=username, points=task.reward, referrals=[])
+        db.session.add(user)
+    else:
+        user.points += task.reward
 
-    # Handle referral points
+    # Update referral points
     if referrer_username and referrer_username != username:
         referrer = User.query.filter_by(username=referrer_username).first()
         if referrer:
-            referrer.points += 50
+            referrer.points += 50  # Referral bonus
             if username not in referrer.referrals:
                 referrer.referrals.append(username)
 
