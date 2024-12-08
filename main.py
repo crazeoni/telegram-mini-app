@@ -111,7 +111,6 @@ def complete_task():
     """Mark a task as completed and update the user's score."""
     data = request.json
     task_id = data.get("task_id")
-    chat_id = data.get("chat_id")
     username = data.get("username")
     referrer_username = data.get("referrer_username")
 
@@ -126,8 +125,8 @@ def complete_task():
     # Update user score
     user = User.query.filter_by(username=username).first()
     if not user:
-        user = User(username=username, chat_id=chat_id, points=task.reward, referrals=[])
-        db.session.add(user)
+        print(f"User not found for username: {username}")
+			return jsonify({"error": "User not found"}), 404
     else:
         user.points += task.reward
 
