@@ -90,7 +90,7 @@ def get_tasks():
             "url": task.url,
             "reward": task.reward,
             "completed": task.completed,
-            "username": task.user.username  # Assuming a relationship between Task and User
+            "username": task.user.username if task.user else None  # Safely handle None
         }
         for task in tasks
     ]
@@ -119,8 +119,11 @@ def complete_task():
     if not task or task.completed:
         return jsonify({"error": "Task not found or already completed"}), 400
 
-    task.completed = True
-    db.session.commit()
+    if task.user_id is None:  # If the task is not yet associated with any user
+        task.user_id = current_user.id  # Dynamically assign the current user's ID
+	
+	task.completed = True
+	db.session.commit()
 
     # Update user score
     user = User.query.filter_by(username=username).first()
