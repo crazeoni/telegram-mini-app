@@ -113,26 +113,36 @@ def complete_task():
     task_id = data.get("task_id")
     username = data.get("username")
     referrer_username = data.get("referrer_username")
+    chat_id = data.get("chat_id")  # Added to fetch the user dynamically if username is unavailable
 
-    # Find and update task
+    # Find and update the task
     task = Task.query.get(task_id)
-    if not task or task.completed:
-        return jsonify({"error": "Task not found or already completed"}), 400
+    if not task:
+        return jsonify({"error": "Task not found"}), 404
+    if task.completed:
+        return jsonify({"error": "Task already completed"}), 400
 
-    if task.user_id is None:  # If the task is not yet associated with any user
-        task.user_id = current_user.id  # Dynamically assign the current user's ID
+    # Fetch the current user based on username or chat_id
+    user = None
+    if username:
+        user = User.query.filter_by(username=username).first()
+    elif chat_id:
+        user = User.query.filter_by(chat_id=chat_id).first()
+
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    # Associate task with user if not already associated
+    if task.user_id is None:
+        task.user_id = user.id
+
     task.completed = True
     db.session.commit()
 
     # Update user score
-    user = User.query.filter_by(username=username).first()
-    if not user:
-        user = User(username=username, points=task.reward, referrals=[])
-        db.session.add(user)
-    else:
-        user.points += task.reward
+    user.points += task.reward
 
-    # Update referral points
+    # Update referral points if applicable
     if referrer_username and referrer_username != username:
         referrer = User.query.filter_by(username=referrer_username).first()
         if referrer:
@@ -141,7 +151,9 @@ def complete_task():
                 referrer.referrals.append(username)
 
     db.session.commit()
+
     return jsonify({"message": f"Task {task_id} completed!", "reward": task.reward}), 200
+
 
 
 
