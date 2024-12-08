@@ -6,6 +6,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from config import SQLALCHEMY_DATABASE_URI, SQLALCHEMY_TRACK_MODIFICATIONS
 from models import db, User, Task
+import logging
 
 
 app = Flask(__name__)
@@ -110,13 +111,14 @@ def leaderboard():
 def complete_task():
     """Mark a task as completed and update the user's score."""
     data = request.json
+    app.logger.debug(f"Request data: {data}")
     task_id = data.get("task_id")
     username = data.get("username")
     referrer_username = data.get("referrer_username")
     chat_id = data.get("chat_id")  # Added to fetch the user dynamically if username is unavailable
 
-    # Find and update the task
-    task = Task.query.get(task_id)
+    # Fetch and validate task using modern API
+    task = db.session.get(Task, task_id)
     if not task:
         return jsonify({"error": "Task not found"}), 404
     if task.completed:
