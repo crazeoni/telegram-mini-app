@@ -115,7 +115,7 @@ def complete_task():
     referrer_username = data.get("referrer_username")
 
     # Find and update task
-    task = Task.query.get(task_id)
+    task = db.session.get(Task, task_id)
     if not task or task.completed:
         return jsonify({"error": "Task not found or already completed"}), 400
 
