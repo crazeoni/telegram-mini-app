@@ -178,14 +178,25 @@ def register_user():
 
 
 
-
-
-# Endpoint to calculate total rewards
 @app.route("/api/get-balance", methods=["GET"])
 def get_balance():
-    """Calculate total rewards for completed tasks."""
-    total_rewards = db.session.query(db.func.sum(Task.reward)).filter(Task.completed == True).scalar() or 0
-    return jsonify({"total": total_rewards}), 200
+    chat_id = request.args.get('chat_id')
+    
+    if not chat_id:
+        return jsonify({"error": "chat_id parameter is required"}), 400
+    
+    user = User.query.filter_by(chat_id=chat_id).first()
+    if user:
+        return jsonify({"total": user.points}), 200
+    return jsonify({"error": "User not found"}), 404
+
+
+# # Endpoint to calculate total rewards
+# @app.route("/api/get-balance", methods=["GET"])
+# def get_balance():
+    # """Calculate total rewards for completed tasks."""
+    # total_rewards = db.session.query(db.func.sum(Task.reward)).filter(Task.completed == True).scalar() or 0
+    # return jsonify({"total": total_rewards}), 200
 
 
 if __name__ == "__main__":
