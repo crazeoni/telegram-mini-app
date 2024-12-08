@@ -6,17 +6,13 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from config import SQLALCHEMY_DATABASE_URI, SQLALCHEMY_TRACK_MODIFICATIONS
 from models import db, User, Task
-import logging
 
 
 app = Flask(__name__)
 CORS(app)
-app.logger.setLevel(logging.DEBUG)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = SQLALCHEMY_TRACK_MODIFICATIONS
-app.config['DEBUG'] = True
-app.config['ENV'] = 'development'
 
 db.init_app(app)
 migrate = Migrate(app, db)
@@ -115,6 +111,7 @@ def complete_task():
     """Mark a task as completed and update the user's score."""
     data = request.json
     task_id = data.get("task_id")
+    chat_id = data.get("chat_id")
     username = data.get("username")
     referrer_username = data.get("referrer_username")
 
@@ -129,7 +126,7 @@ def complete_task():
     # Update user score
     user = User.query.filter_by(username=username).first()
     if not user:
-        user = User(username=username, chat_id=chat_id, points=500, referrals=[])
+        user = User(username=username, chat_id=chat_id, points=task.reward, referrals=[])
         db.session.add(user)
     else:
         user.points += task.reward
