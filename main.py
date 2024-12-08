@@ -6,13 +6,17 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from config import SQLALCHEMY_DATABASE_URI, SQLALCHEMY_TRACK_MODIFICATIONS
 from models import db, User, Task
+import logging
 
 
 app = Flask(__name__)
 CORS(app)
+app.logger.setLevel(logging.DEBUG)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = SQLALCHEMY_TRACK_MODIFICATIONS
+app.config['DEBUG'] = True
+app.config['ENV'] = 'development'
 
 db.init_app(app)
 migrate = Migrate(app, db)
