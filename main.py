@@ -90,7 +90,7 @@ def get_tasks():
             "url": task.url,
             "reward": task.reward,
             "completed": task.completed,
-            "username": task.user.username if task.user else None  # Safely handle None
+            "username": task.user.username  # Assuming a relationship between Task and User
         }
         for task in tasks
     ]
@@ -115,7 +115,7 @@ def complete_task():
     referrer_username = data.get("referrer_username")
 
     # Find and update task
-    task = db.session.get(Task, task_id)
+    task = Task.query.get(task_id)
     if not task or task.completed:
         return jsonify({"error": "Task not found or already completed"}), 400
 
@@ -125,8 +125,8 @@ def complete_task():
     # Update user score
     user = User.query.filter_by(username=username).first()
     if not user:
-        print(f"User not found for username: {username}")
-        return jsonify({"error": "User not found"}), 404
+        user = User(username=username, points=task.reward, referrals=[])
+        db.session.add(user)
     else:
         user.points += task.reward
 
@@ -140,7 +140,6 @@ def complete_task():
 
     db.session.commit()
     return jsonify({"message": f"Task {task_id} completed!", "reward": task.reward}), 200
-
 
 
 
@@ -188,4 +187,4 @@ def get_balance():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000)
