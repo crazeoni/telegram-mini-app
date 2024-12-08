@@ -124,6 +124,7 @@ def complete_task():
         return jsonify({"error": "Task not found or already completed"}), 400
 
     task.completed = True
+    task.user_id = user.id
     db.session.commit()
 
     # Update user score
