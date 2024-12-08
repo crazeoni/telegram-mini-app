@@ -121,9 +121,8 @@ def complete_task():
 
     if task.user_id is None:  # If the task is not yet associated with any user
         task.user_id = current_user.id  # Dynamically assign the current user's ID
-	
-	task.completed = True
-	db.session.commit()
+    task.completed = True
+    db.session.commit()
 
     # Update user score
     user = User.query.filter_by(username=username).first()
