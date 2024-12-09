@@ -12,6 +12,29 @@ import logging
 app = Flask(__name__)
 CORS(app)
 
+
+# Create a log file handler
+file_handler = logging.FileHandler("app.log")
+file_handler.setLevel(logging.DEBUG)
+
+# Create a stream handler for console output
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.DEBUG)
+
+# Set the logging format
+formatter = logging.Formatter(
+    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+file_handler.setFormatter(formatter)
+console_handler.setFormatter(formatter)
+
+# Add handlers to Flask's logger
+app.logger.addHandler(file_handler)
+app.logger.addHandler(console_handler)
+
+app.logger.setLevel(logging.DEBUG)
+
+
 app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = SQLALCHEMY_TRACK_MODIFICATIONS
 
@@ -111,6 +134,7 @@ def leaderboard():
 def complete_task():
     """Mark a task as completed and update the user's score."""
     data = request.json
+    app.logger.debug(f"Incoming request data: {data}")
     task_id = data.get("task_id")
     username = data.get("username")
     referrer_username = data.get("referrer_username")
@@ -194,4 +218,4 @@ def get_balance():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5000, debug=True)

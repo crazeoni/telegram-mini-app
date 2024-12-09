@@ -4,8 +4,8 @@ db = SQLAlchemy()
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    chat_id = db.Column(db.String(120), unique=True, nullable=False)
+    username = db.Column(db.String(80), unique=True, nullable=True)
+    chat_id = db.Column(db.String(120), unique=True, nullable=True)
     points = db.Column(db.Integer, default=0)
     referrals = db.Column(db.JSON, default=[])
     tasks = db.relationship("Task", backref="user", lazy=True)  # Relationship to Task
