@@ -9,6 +9,6 @@ with app.app_context():
 
     # Optional: Reset auto-increment sequence for user_id (for PostgreSQL)
     db.session.execute(text('ALTER SEQUENCE user_id_seq RESTART WITH 1'))
-    db.session.commit()z
+    db.session.commit()
 
 print("User table cleared and reset.")

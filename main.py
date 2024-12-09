@@ -111,40 +111,27 @@ def leaderboard():
 def complete_task():
     """Mark a task as completed and update the user's score."""
     data = request.json
-    app.logger.debug(f"Request data: {data}")
     task_id = data.get("task_id")
     username = data.get("username")
     referrer_username = data.get("referrer_username")
-    chat_id = data.get("chat_id")  # Added to fetch the user dynamically if username is unavailable
 
-    # Fetch and validate task using modern API
-    task = db.session.get(Task, task_id)
-    if not task:
-        return jsonify({"error": "Task not found"}), 404
-    if task.completed:
-        return jsonify({"error": "Task already completed"}), 400
-
-    # Fetch the current user based on username or chat_id
-    user = None
-    if username:
-        user = User.query.filter_by(username=username).first()
-    elif chat_id:
-        user = User.query.filter_by(chat_id=chat_id).first()
-
-    if not user:
-        return jsonify({"error": "User not found"}), 404
-
-    # Associate task with user if not already associated
-    if task.user_id is None:
-        task.user_id = user.id
+    # Find and update task
+    task = Task.query.get(task_id)
+    if not task or task.completed:
+        return jsonify({"error": "Task not found or already completed"}), 400
 
     task.completed = True
     db.session.commit()
 
     # Update user score
-    user.points += task.reward
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        user = User(username=username, points=task.reward, referrals=[])
+        db.session.add(user)
+    else:
+        user.points += task.reward
 
-    # Update referral points if applicable
+    # Update referral points
     if referrer_username and referrer_username != username:
         referrer = User.query.filter_by(username=referrer_username).first()
         if referrer:
@@ -153,7 +140,6 @@ def complete_task():
                 referrer.referrals.append(username)
 
     db.session.commit()
-
     return jsonify({"message": f"Task {task_id} completed!", "reward": task.reward}), 200
 
 
@@ -192,25 +178,12 @@ def register_user():
 
 
 
+# Endpoint to calculate total rewards
 @app.route("/api/get-balance", methods=["GET"])
 def get_balance():
-    chat_id = request.args.get('chat_id')
-    
-    if not chat_id:
-        return jsonify({"error": "chat_id parameter is required"}), 400
-    
-    user = User.query.filter_by(chat_id=chat_id).first()
-    if user:
-        return jsonify({"total": user.points}), 200
-    return jsonify({"error": "User not found"}), 404
-
-
-# # Endpoint to calculate total rewards
-# @app.route("/api/get-balance", methods=["GET"])
-# def get_balance():
-    # """Calculate total rewards for completed tasks."""
-    # total_rewards = db.session.query(db.func.sum(Task.reward)).filter(Task.completed == True).scalar() or 0
-    # return jsonify({"total": total_rewards}), 200
+    """Calculate total rewards for completed tasks."""
+    total_rewards = db.session.query(db.func.sum(Task.reward)).filter(Task.completed == True).scalar() or 0
+    return jsonify({"total": total_rewards}), 200
 
 
 if __name__ == "__main__":
