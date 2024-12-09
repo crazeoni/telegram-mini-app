@@ -114,6 +114,11 @@ def complete_task():
     task_id = data.get("task_id")
     username = data.get("username")
     referrer_username = data.get("referrer_username")
+    chat_id = data.get("chat_id")
+
+    # Validate input
+    if not username or not chat_id:
+        return jsonify({"error": "Both username and chat_id are required"}), 400
 
     # Find and update task
     task = Task.query.get(task_id)
@@ -126,7 +131,7 @@ def complete_task():
     # Update user score
     user = User.query.filter_by(username=username).first()
     if not user:
-        user = User(username=username, points=task.reward, referrals=[])
+        user = User(username=username, chat_id=chat_id, points=task.reward, referrals=[])
         db.session.add(user)
     else:
         user.points += task.reward
@@ -141,6 +146,7 @@ def complete_task():
 
     db.session.commit()
     return jsonify({"message": f"Task {task_id} completed!", "reward": task.reward}), 200
+
 
 
 
