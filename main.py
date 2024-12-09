@@ -116,10 +116,6 @@ def complete_task():
     referrer_username = data.get("referrer_username")
     chat_id = data.get("chat_id")
 
-    # Validate input
-    if not username or not chat_id:
-        return jsonify({"error": "Both username and chat_id are required"}), 400
-
     # Find and update task
     task = Task.query.get(task_id)
     if not task or task.completed:
@@ -184,12 +180,17 @@ def register_user():
 
 
 
-# Endpoint to calculate total rewards
 @app.route("/api/get-balance", methods=["GET"])
 def get_balance():
-    """Calculate total rewards for completed tasks."""
-    total_rewards = db.session.query(db.func.sum(Task.reward)).filter(Task.completed == True).scalar() or 0
-    return jsonify({"total": total_rewards}), 200
+    chat_id = request.args.get('chat_id')
+    
+    if not chat_id:
+        return jsonify({"error": "chat_id parameter is required"}), 400
+    
+    user = User.query.filter_by(chat_id=chat_id).first()
+    if user:
+        return jsonify({"total": user.points}), 200
+    return jsonify({"error": "User not found"}), 404
 
 
 if __name__ == "__main__":
