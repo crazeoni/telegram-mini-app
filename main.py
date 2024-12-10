@@ -6,34 +6,10 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from config import SQLALCHEMY_DATABASE_URI, SQLALCHEMY_TRACK_MODIFICATIONS
 from models import db, User, Task
-import logging
 
 
 app = Flask(__name__)
 CORS(app)
-
-
-# Create a log file handler
-file_handler = logging.FileHandler("app.log")
-file_handler.setLevel(logging.DEBUG)
-
-# Create a stream handler for console output
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.DEBUG)
-
-# Set the logging format
-formatter = logging.Formatter(
-    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-file_handler.setFormatter(formatter)
-console_handler.setFormatter(formatter)
-
-# Add handlers to Flask's logger
-app.logger.addHandler(file_handler)
-app.logger.addHandler(console_handler)
-
-app.logger.setLevel(logging.DEBUG)
-
 
 app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = SQLALCHEMY_TRACK_MODIFICATIONS
@@ -105,17 +81,15 @@ def save_user_scores(user_scores):
 # Routes
 @app.route("/api/tasks", methods=["GET"])
 def get_tasks():
-    """Fetch all tasks with title, URL, and username."""
-    tasks = Task.query.all()
+    """Fetch all tasks assigned to a specific user."""
+    chat_id = request.args.get("chat_id")
+    user = User.query.filter_by(chat_id=chat_id).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    tasks = Task.query.filter_by(user_id=user.id).all()
     tasks_data = [
-        {
-            "id": task.id,
-            "title": task.title,
-            "url": task.url,
-            "reward": task.reward,
-            "completed": task.completed,
-            "username": task.user.username if task.user else None  # Safely handle None
-        }
+        {"id": task.id, "title": task.title, "url": task.url, "reward": task.reward, "completed": task.completed}
         for task in tasks
     ]
     return jsonify(tasks_data), 200
@@ -134,11 +108,9 @@ def leaderboard():
 def complete_task():
     """Mark a task as completed and update the user's score."""
     data = request.json
-    app.logger.debug(f"Incoming request data: {data}")
     task_id = data.get("task_id")
     username = data.get("username")
     referrer_username = data.get("referrer_username")
-    chat_id = data.get("chat_id")
 
     # Find and update task
     task = Task.query.get(task_id)
@@ -151,7 +123,7 @@ def complete_task():
     # Update user score
     user = User.query.filter_by(username=username).first()
     if not user:
-        user = User(username=username, chat_id=chat_id, points=task.reward, referrals=[])
+        user = User(username=username, points=task.reward, referrals=[])
         db.session.add(user)
     else:
         user.points += task.reward
@@ -169,8 +141,6 @@ def complete_task():
 
 
 
-
-
 @app.route("/api/register", methods=["POST"])
 def register_user():
     """Register a new user."""
@@ -182,8 +152,7 @@ def register_user():
     if not username or not chat_id:
         return jsonify({"error": "Username and chat_id are required"}), 400
 
-    # Check if the user already exists
-    user = User.query.filter_by(username=username).first()
+    user = User.query.filter_by(chat_id=chat_id).first()
     if not user:
         # Register the new user
         user = User(username=username, chat_id=chat_id, points=0, referrals=[])
@@ -195,26 +164,36 @@ def register_user():
             referrer = User.query.filter_by(username=referral_data).first()
             if referrer and referrer.username != username:
                 referrer.referrals.append(username)
-                referrer.points += 50  # Optional referral bonus
+                referrer.points += 50  # Referral bonus
                 db.session.commit()
 
         return jsonify({"message": "User registered successfully"}), 201
-
     return jsonify({"message": "User already exists"}), 200
 
 
 
+
+
+# Endpoint to calculate total rewards
 @app.route("/api/get-balance", methods=["GET"])
 def get_balance():
-    chat_id = request.args.get('chat_id')
-    
+    """Calculate total rewards for completed tasks for a specific user."""
+    chat_id = request.args.get("chat_id")
     if not chat_id:
-        return jsonify({"error": "chat_id parameter is required"}), 400
-    
+        return jsonify({"error": "chat_id is required"}), 400
+
+    # Fetch user by chat_id
     user = User.query.filter_by(chat_id=chat_id).first()
-    if user:
-        return jsonify({"total": user.points}), 200
-    return jsonify({"error": "User not found"}), 404
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    # Calculate total rewards for completed tasks for the user
+    total_rewards = db.session.query(db.func.sum(Task.reward)).filter(
+        Task.completed == True, Task.user_id == user.id
+    ).scalar() or 0
+
+    return jsonify({"total": total_rewards}), 200
+
 
 
 if __name__ == "__main__":
