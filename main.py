@@ -243,11 +243,13 @@ def get_balance():
         return jsonify({"error": "User not found"}), 404
 
     # Calculate total rewards for completed tasks for the user
-    total_rewards = db.session.query(db.func.sum(Task.reward)).filter(
-        Task.completed == True, Task.user_id == user.id
+    total_rewards = db.session.query(db.func.sum(Task.reward)).join(UserTask).filter(
+        UserTask.user_id == user.id,
+        UserTask.completed == True
     ).scalar() or 0
 
     return jsonify({"total": total_rewards}), 200
+
 
 
 
