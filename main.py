@@ -116,8 +116,8 @@ def get_tasks():
     
     if not chat_id:
         return jsonify({"error": "chat_id is required"}), 400
-	
-	user = User.query.filter_by(chat_id=chat_id).first()
+    
+    user = User.query.filter_by(chat_id=chat_id).first()
     if not user:
         return jsonify({"error": "User not found"}), 404
 
