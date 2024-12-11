@@ -1,14 +1,10 @@
-from sqlalchemy import text
 from models import db, User
 from main import app
 
-# Step 1: Delete all users
+# Step 1: Fetch all users with their usernames
 with app.app_context():
-    User.query.delete()
-    db.session.commit()
+    users = User.query.all()  # Retrieve all users from the database
+    for user in users:
+        print(f"User ID: {user.id}, Username: {user.username}, Chat ID: {user.chat_id}, Points: {user.points}")
 
-    # Optional: Reset auto-increment sequence for user_id (for PostgreSQL)
-    db.session.execute(text('ALTER SEQUENCE user_id_seq RESTART WITH 1'))
-    db.session.commit()
-
-print("User table cleared and reset.")
+print("All users retrieved successfully.")

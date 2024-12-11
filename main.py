@@ -111,6 +111,7 @@ def get_tasks():
     chat_id = request.args.get("chat_id")
     app.logger.info(f"Received chat_id: {chat_id}")
     user = User.query.filter_by(chat_id=chat_id).first()
+    app.logger.info(f"Received chat_id: {user}")
 
     if not user:
         return jsonify({"error": "User not found"}), 404
@@ -147,6 +148,8 @@ def leaderboard():
 def complete_task():
     """Mark a task as completed for a specific user and handle referral bonuses."""
     data = request.json
+    print("Incoming data:", data)  # Debugging line
+    app.logger.info(f"Incoming data: {data}")
     chat_id = data.get("chat_id")
     task_id = data.get("task_id")
     referrer_username = data.get("referrer_username")
