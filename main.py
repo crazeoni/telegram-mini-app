@@ -107,6 +107,11 @@ def save_user_scores(user_scores):
 # Routes
 @app.route("/api/tasks", methods=["GET"])
 def get_tasks():
+	
+	# Retrieve username from request arguments
+    username = request.args.get("username")
+    # Fetch the user based on username
+    user = User.query.filter_by(username=username).first()
     # Fetch all tasks
     tasks = Task.query.all()
     user_task_map = {ut.task_id: ut.completed for ut in user.user_tasks}
