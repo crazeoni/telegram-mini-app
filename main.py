@@ -107,15 +107,21 @@ def save_user_scores(user_scores):
 # Routes
 @app.route("/api/tasks", methods=["GET"])
 def get_tasks():
-	
-	# Retrieve username from request arguments
+    # Retrieve username from request arguments
     username = request.args.get("username")
+    if not username:
+        return jsonify({"error": "username is required"}), 400
+
     # Fetch the user based on username
     user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
     # Fetch all tasks
     tasks = Task.query.all()
-    user_task_map = {ut.task_id: ut.completed for ut in user.user_tasks}
-    app.logger.info(f"Received chat_id: {user_task_map}")
+
+    # Map user task completion status
+    user_task_map = {ut.task_id: ut.completed for ut in user.user_tasks or []}
 
     # Include user's completion status in the response
     tasks_data = [
@@ -128,7 +134,9 @@ def get_tasks():
         }
         for task in tasks
     ]
+
     return jsonify(tasks_data), 200
+
 
 
 
