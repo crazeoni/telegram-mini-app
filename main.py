@@ -6,10 +6,36 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from config import SQLALCHEMY_DATABASE_URI, SQLALCHEMY_TRACK_MODIFICATIONS
 from models import db, User, Task
+import logging
 
 
 app = Flask(__name__)
 CORS(app)
+
+
+# Create a log file handler
+file_handler = logging.FileHandler("app.log")
+file_handler.setLevel(logging.DEBUG)
+
+# Create a stream handler for console output
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.DEBUG)
+
+# Set the logging format
+formatter = logging.Formatter(
+    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+file_handler.setFormatter(formatter)
+console_handler.setFormatter(formatter)
+
+# Add handlers to Flask's logger
+app.logger.addHandler(file_handler)
+app.logger.addHandler(console_handler)
+
+app.logger.setLevel(logging.DEBUG)
+
+
+
 
 app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = SQLALCHEMY_TRACK_MODIFICATIONS
@@ -81,15 +107,28 @@ def save_user_scores(user_scores):
 # Routes
 @app.route("/api/tasks", methods=["GET"])
 def get_tasks():
-    """Fetch all tasks assigned to a specific user."""
+    """Fetch all tasks with completion status for the requesting user."""
     chat_id = request.args.get("chat_id")
+    app.logger.info(f"Received chat_id: {chat_id}")
     user = User.query.filter_by(chat_id=chat_id).first()
+
     if not user:
         return jsonify({"error": "User not found"}), 404
 
-    tasks = Task.query.filter_by(user_id=user.id).all()
+    # Fetch all tasks
+    tasks = Task.query.all()
+    user_task_map = {ut.task_id: ut.completed for ut in user.user_tasks}
+    app.logger.info(f"Received chat_id: {user_task_map}")
+
+    # Include user's completion status in the response
     tasks_data = [
-        {"id": task.id, "title": task.title, "url": task.url, "reward": task.reward, "completed": task.completed}
+        {
+            "id": task.id,
+            "title": task.title,
+            "url": task.url,
+            "reward": task.reward,
+            "completed": user_task_map.get(task.id, False),  # Default to False
+        }
         for task in tasks
     ]
     return jsonify(tasks_data), 200
@@ -106,38 +145,54 @@ def leaderboard():
 
 @app.route("/api/tasks/complete", methods=["POST"])
 def complete_task():
-    """Mark a task as completed and update the user's score."""
+    """Mark a task as completed for a specific user and handle referral bonuses."""
     data = request.json
+    chat_id = data.get("chat_id")
     task_id = data.get("task_id")
-    username = data.get("username")
     referrer_username = data.get("referrer_username")
 
-    # Find and update task
-    task = Task.query.get(task_id)
-    if not task or task.completed:
-        return jsonify({"error": "Task not found or already completed"}), 400
+    if not chat_id or not task_id:
+        return jsonify({"error": "chat_id and task_id are required"}), 400
 
-    task.completed = True
-    db.session.commit()
-
-    # Update user score
-    user = User.query.filter_by(username=username).first()
+    # Fetch the user
+    user = User.query.filter_by(chat_id=chat_id).first()
     if not user:
-        user = User(username=username, points=task.reward, referrals=[])
-        db.session.add(user)
-    else:
-        user.points += task.reward
+        return jsonify({"error": "User not found"}), 404
 
-    # Update referral points
-    if referrer_username and referrer_username != username:
+    # Fetch the task
+    task = Task.query.get(task_id)
+    if not task:
+        return jsonify({"error": "Task not found"}), 404
+
+    # Check or create a UserTask entry
+    user_task = UserTask.query.filter_by(user_id=user.id, task_id=task_id).first()
+    if not user_task:
+        user_task = UserTask(user_id=user.id, task_id=task_id, completed=True)
+        db.session.add(user_task)
+    elif user_task.completed:
+        return jsonify({"error": "Task already completed by this user"}), 400
+    else:
+        user_task.completed = True
+
+    # Update user's points
+    user.points += task.reward
+
+    # Handle referral bonuses
+    if referrer_username and referrer_username != user.username:
         referrer = User.query.filter_by(username=referrer_username).first()
         if referrer:
             referrer.points += 50  # Referral bonus
-            if username not in referrer.referrals:
-                referrer.referrals.append(username)
+            if user.username not in referrer.referrals:
+                referrer.referrals.append(user.username)
 
     db.session.commit()
-    return jsonify({"message": f"Task {task_id} completed!", "reward": task.reward}), 200
+
+    return jsonify({
+        "message": f"Task {task_id} marked as completed!",
+        "reward": task.reward,
+        "total_points": user.points
+    }), 200
+
 
 
 
