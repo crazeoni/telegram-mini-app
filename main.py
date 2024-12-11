@@ -110,8 +110,13 @@ def get_tasks():
     """Fetch all tasks with completion status for the requesting user."""
     chat_id = request.args.get("chat_id")
     app.logger.info(f"Received chat_id: {chat_id}")
+    app.logger.info(f"Query string received: {request.query_string.decode()}")
     user = User.query.filter_by(chat_id=chat_id).first()
     app.logger.info(f"Received chat_id: {user}")
+    
+    
+    if not chat_id:
+        return jsonify({"error": "chat_id is required"}), 400
 
     if not user:
         return jsonify({"error": "User not found"}), 404
