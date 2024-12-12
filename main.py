@@ -235,7 +235,19 @@ def register_user():
 @app.route("/api/get-balance", methods=["GET"])
 def get_balance():
     """Calculate total rewards for completed tasks."""
-    total_rewards = db.session.query(db.func.sum(UserTask.reward)).filter(UserTask.completed == True).scalar() or 0
+    username = request.args.get("username")
+    if not username:
+        return jsonify({"error": "username is required"}), 400
+    
+    # Fetch the user based on username
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+     # Calculate total rewards for completed tasks for the user
+    total_rewards = db.session.query(db.func.sum(Task.reward)).join(UserTask).filter(
+        UserTask.user_id == user.id,
+        UserTask.completed == True
+    ).scalar() or 0
     return jsonify({"total": total_rewards}), 200
 
 
