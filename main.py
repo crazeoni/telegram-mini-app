@@ -155,9 +155,21 @@ def complete_task():
     print("Incoming data:", data)  # Debugging line
     app.logger.info(f"Incoming data: {data}")
     chat_id = data.get("chat_id")
-    username = data.get("username")
     task_id = data.get("task_id")
     referrer_username = data.get("referrer_username")
+
+    if not chat_id or not task_id:
+        return jsonify({"error": "chat_id and task_id are required"}), 400
+
+    # Fetch the user
+    user = User.query.filter_by(chat_id=chat_id).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    # Fetch the task
+    task = Task.query.get(task_id)
+    if not task:
+        return jsonify({"error": "Task not found"}), 404
 
     # Check or create a UserTask entry
     user_task = UserTask.query.filter_by(user_id=user.id, task_id=task_id).first()
@@ -170,13 +182,7 @@ def complete_task():
         user_task.completed = True
 
     # Update user's points
-    # Update user score
-    user = User.query.filter_by(username=username).first()
-    if not user:
-        user = User(username=username, points=task.reward, referrals=[])
-        db.session.add(user)
-    else:
-        user.points += task.reward
+    user.points += task.reward
 
     # Handle referral bonuses
     if referrer_username and referrer_username != user.username:
