@@ -161,11 +161,6 @@ def complete_task():
 	if not chat_id or not task_id:
 		return jsonify({"error": "chat_id and task_id are required"}), 400
 	
-	try:
-		chat_id = int(chat_id)
-	except ValueError:
-		return jsonify({"error": "User not found"}), 404
-	
 	# Fetch the user
 	user = User.query.filter_by(chat_id=chat_id).first()
 	if not user:
