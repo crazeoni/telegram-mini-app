@@ -150,55 +150,56 @@ def leaderboard():
 
 @app.route("/api/tasks/complete", methods=["POST"])
 def complete_task():
-	"""Mark a task as completed for a specific user and handle referral bonuses."""
-	data = request.json
-	print("Incoming data:", data)  # Debugging line
-	app.logger.info(f"Incoming data: {data}")
-	chat_id = data.get("chat_id")
-	task_id = data.get("task_id")
-	referrer_username = data.get("referrer_username")
+    """Mark a task as completed for a specific user and handle referral bonuses."""
+    data = request.json
+    print("Incoming data:", data)  # Debugging line
+    app.logger.info(f"Incoming data: {data}")
+    username = data.get("username")  # Get the username instead of chat_id
+    task_id = data.get("task_id")
+    referrer_username = data.get("referrer_username")
 
-	if not chat_id or not task_id:
-		return jsonify({"error": "chat_id and task_id are required"}), 400
-	
-	# Fetch the user
-	user = User.query.filter_by(chat_id=chat_id).first()
-	if not user:
-		return jsonify({"error": "User not found"}), 404
+    if not username or not task_id:
+        return jsonify({"error": "username and task_id are required"}), 400
 
-	# Fetch the task
-	task = Task.query.get(task_id)
-	if not task:
-		return jsonify({"error": "Task not found"}), 404
+    # Fetch the user by username
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
 
-	# Check or create a UserTask entry
-	user_task = UserTask.query.filter_by(user_id=user.id, task_id=task_id).first()
-	if not user_task:
-		user_task = UserTask(user_id=user.id, task_id=task_id, completed=True)
-		db.session.add(user_task)
-	elif user_task.completed:
-		return jsonify({"error": "Task already completed by this user"}), 400
-	else:
-		user_task.completed = True
+    # Fetch the task
+    task = Task.query.get(task_id)
+    if not task:
+        return jsonify({"error": "Task not found"}), 404
 
-	# Update user's points
-	user.points += task.reward
+    # Check or create a UserTask entry
+    user_task = UserTask.query.filter_by(user_id=user.id, task_id=task_id).first()
+    if not user_task:
+        user_task = UserTask(user_id=user.id, task_id=task_id, completed=True)
+        db.session.add(user_task)
+    elif user_task.completed:
+        return jsonify({"error": "Task already completed by this user"}), 400
+    else:
+        user_task.completed = True
 
-	# Handle referral bonuses
-	if referrer_username and referrer_username != user.username:
-		referrer = User.query.filter_by(username=referrer_username).first()
-		if referrer:
-			referrer.points += 50  # Referral bonus
-			if user.username not in referrer.referrals:
-				referrer.referrals.append(user.username)
+    # Update user's points
+    user.points += task.reward
 
-	db.session.commit()
+    # Handle referral bonuses
+    if referrer_username and referrer_username != user.username:
+        referrer = User.query.filter_by(username=referrer_username).first()
+        if referrer:
+            referrer.points += 50  # Referral bonus
+            if user.username not in referrer.referrals:
+                referrer.referrals.append(user.username)
 
-	return jsonify({
-		"message": f"Task {task_id} marked as completed!",
-		"reward": task.reward,
-		"total_points": user.points
-	}), 200
+    db.session.commit()
+
+    return jsonify({
+        "message": f"Task {task_id} marked as completed!",
+        "reward": task.reward,
+        "total_points": user.points
+    }), 200
+
 
 
 
