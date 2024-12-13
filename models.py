@@ -20,7 +20,7 @@ class User(db.Model):
     received_referrals = db.relationship(
         'Referral',
         foreign_keys='Referral.referred_user_id',
-        backref='referred_user',
+        backref='referred_by',  # Changed backref name to avoid conflict
         lazy=True
     )
 
