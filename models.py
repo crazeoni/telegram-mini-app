@@ -7,8 +7,25 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=True)
     chat_id = db.Column(db.BigInteger, unique=True, nullable=True)
     points = db.Column(db.Integer, default=0)
-    referrals = db.relationship('Referral', backref='referrer', lazy=True)  # Referrals made by this user
-    tasks = db.relationship("Task", backref="user", lazy=True)  # Relationship to Task
+
+    # Referrals this user has made
+    made_referrals = db.relationship(
+        'Referral',
+        foreign_keys='Referral.referrer_id',
+        backref='referring_user',
+        lazy=True
+    )
+
+    # Referrals this user has received
+    received_referrals = db.relationship(
+        'Referral',
+        foreign_keys='Referral.referred_user_id',
+        backref='referred_user',
+        lazy=True
+    )
+
+    # Relationship to tasks
+    tasks = db.relationship("Task", backref="user", lazy=True)
 
 
 class Task(db.Model):
@@ -34,5 +51,8 @@ class Referral(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     referrer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Referring user
     referred_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Referred user
-    referred_user = db.relationship('User', foreign_keys=[referred_user_id])  # Relationship to referred user
     referral_bonus = db.Column(db.Integer, default=50)  # Bonus points for the referrer
+
+    # Relationships with explicit foreign keys
+    referrer = db.relationship('User', foreign_keys=[referrer_id], backref='referrals_made')
+    referred_user = db.relationship('User', foreign_keys=[referred_user_id], backref='referrals_received')
