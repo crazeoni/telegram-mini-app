@@ -237,7 +237,7 @@ def register_user():
     user = User.query.filter_by(chat_id=chat_id).first()
     if not user:
         # Register the new user
-        user = User(username=username, chat_id=chat_id, points=0, referrals=[])
+        user = User(username=username, chat_id=chat_id, points=0)
         db.session.add(user)
     return jsonify({"message": "User already exists"}), 200
     
