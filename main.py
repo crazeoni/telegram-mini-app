@@ -161,7 +161,7 @@ def get_tasks():
 def leaderboard():
     """Fetch leaderboard sorted by points."""
     users = User.query.order_by(User.points.desc()).limit(100).all()
-    leaderboard = [{"username": user.username, "points": user.points, "referrals": Referral.query.filter_by(referrer_id=user.id).count(),} for user in users]
+    leaderboard = [{"username": user.username, "points": user.points,} for user in users]
     return jsonify(leaderboard), 200
 
 
