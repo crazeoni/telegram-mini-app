@@ -221,39 +221,35 @@ def complete_task():
 
 
 
-
-
 @app.route("/api/register", methods=["POST"])
 def register_user():
-    """Register a new user."""
-    data = request.json
-    username = data.get("username")
-    chat_id = data.get("chat_id")
-    referrer_username = data.get("referrer_username")
+	"""Register a new user."""
+	data = request.json
+	username = data.get("username")
+	chat_id = data.get("chat_id")
+	referrer_username = data.get("referrer_username")
 
-    if not username or not chat_id:
-        return jsonify({"error": "Username and chat_id are required"}), 400
+	if not username or not chat_id:
+		return jsonify({"error": "Username and chat_id are required"}), 400
 
-    user = User.query.filter_by(chat_id=chat_id).first()
-    if not user:
-        # Register the new user
-        user = User(username=username, chat_id=chat_id, points=0)
-        db.session.add(user)
-    return jsonify({"message": "User already exists"}), 200
-    
-    # Process referral data
-    if referrer_username:
-        # Handle referrals
-        referrer = User.query.filter_by(username=referrer_username).first()
-        if referrer and referrer.id != user.id:  # Ensure the referrer isn't the same user
-            referral = Referral(referrer_id=referrer.id, referred_user_id=user.id)
-            referrer.points += referral.referral_bonus  # Add referral bonus points
-            db.session.add(referral)
+	user = User.query.filter_by(chat_id=chat_id).first()
+	if not user:
+		# Register the new user
+		user = User(username=username, chat_id=chat_id, points=0)
+		db.session.add(user)
+		db.session.commit()
 
-    db.session.commit()
+		# Process referral data
+		if referrer_username:
+			# Handle referrals
+			referrer = User.query.filter_by(username=referrer_username).first()
+			if referrer and referrer.id != user.id:  # Ensure the referrer isn't the same user
+				referral = Referral(referrer_id=referrer.id, referred_user_id=user.id)
+				referrer.points += referral.referral_bonus  # Add referral bonus points
+				db.session.commit()
 
-    return jsonify({"message": "User registered successfully"}), 201
-    
+		return jsonify({"message": "User registered successfully"}), 201
+	return jsonify({"message": "User already exists"}), 200
 
 
 
