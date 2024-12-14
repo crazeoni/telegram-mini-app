@@ -227,7 +227,7 @@ def register_user():
 	data = request.json
 	username = data.get("username")
 	chat_id = data.get("chat_id")
-	referrer_username = data.get("referrer_username")
+	referral_data = data.get("referral_data")
 
 	if not username or not chat_id:
 		return jsonify({"error": "Username and chat_id are required"}), 400
@@ -240,11 +240,13 @@ def register_user():
 		db.session.commit()
 
 		# Process referral data
-		if referrer_username:
+		if referral_data:
 			# Handle referrals
-			referrer = User.query.filter_by(username=referrer_username).first()
+			referrer_user_id = referral_data.get("user_id")  # Extract referrer user_id
+			referrer = User.query.filter_by(chat_id=referrer_user_id).first()
+			
 			if referrer and referrer.id != user.id:  # Ensure the referrer isn't the same user
-				referral = Referral(referrer_id=referrer.id, referred_user_id=user.id)
+				referral = Referral(referrer_id=referrer.id, referred_user=user)
 				referrer.points += referral.referral_bonus  # Add referral bonus points
 				db.session.commit()
 
