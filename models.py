@@ -33,14 +33,14 @@ class Task(db.Model):
     title = db.Column(db.String(80), nullable=False)
     reward = db.Column(db.Integer, nullable=False)
     url = db.Column(db.String(200), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=True)
 
 
 class UserTask(db.Model):
     """Join table for User and Task to track completion status."""
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
+    task_id = db.Column(db.Integer, db.ForeignKey('task.id', ondelete='CASCADE'), nullable=False)
     completed = db.Column(db.Boolean, default=False)
 
     user = db.relationship('User', backref='user_tasks')
@@ -49,8 +49,8 @@ class UserTask(db.Model):
 
 class Referral(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    referrer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Referring user
-    referred_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Referred user
+    referrer_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)  # Referring user
+    referred_user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)  # Referred user
     referral_bonus = db.Column(db.Integer, default=50)  # Bonus points for the referrer
 
     # Relationships with explicit foreign keys
