@@ -228,6 +228,7 @@ def register_user():
 	username = data.get("username")
 	chat_id = data.get("chat_id")
 	referral_data = data.get("referral_data")
+	app.logger.info(f"Incoming referral data: {referral_data}")
 
 	if not username or not chat_id:
 		return jsonify({"error": "Username and chat_id are required"}), 400
@@ -244,6 +245,7 @@ def register_user():
 			# Handle referrals
 			referrer_user_id = referral_data.get("user_id")  # Extract referrer user_id
 			referrer = User.query.filter_by(chat_id=referrer_user_id).first()
+			app.logger.info(f"referral data: {referrer}, {referrer_user_id}")
 			
 			if referrer and referrer.id != user.id:  # Ensure the referrer isn't the same user
 				referral = Referral(referrer_id=referrer.id, referred_user=user)
