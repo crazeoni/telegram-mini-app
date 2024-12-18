@@ -253,7 +253,7 @@ def register_user():
 				db.session.commit()
 
 		return jsonify({"message": "User registered successfully"}), 201
-	return jsonify({"message": "User already exists"}), 200
+	return jsonify({"message": "User already exists", "user_id": user.id, "chat_id": user.chat_id}), 200
 
 
 
