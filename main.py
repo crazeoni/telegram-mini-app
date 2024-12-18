@@ -243,7 +243,7 @@ def register_user():
 		# Process referral data
 		if referral_data:
 			# Handle referrals
-			referrer_user_id = referral_data.get("user_id")  # Extract referrer user_id
+			referrer_user_id = referral_data.get("chat_id")  # Extract referrer user_id
 			referrer = User.query.filter_by(chat_id=referrer_user_id).first()
 			app.logger.info(f"referral data: {referrer}, {referrer_user_id}")
 			
@@ -253,7 +253,7 @@ def register_user():
 				db.session.commit()
 
 		return jsonify({"message": "User registered successfully"}), 201
-	return jsonify({"message": "User already exists", "user_id": user.id, "chat_id": user.chat_id}), 200
+	return jsonify({"message": "User already exists"}), 200
 
 
 
